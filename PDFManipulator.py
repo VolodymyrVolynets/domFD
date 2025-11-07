@@ -1,4 +1,5 @@
 from PIL import Image
+from numpy.ma.testutils import assert_not_equal
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import NameObject, TextStringObject
 import os
@@ -71,6 +72,7 @@ class PDFManipulator:
 
             for annot_ref in annots:
                 annot = annot_ref.get_object() if hasattr(annot_ref, "get_object") else annot_ref
+                print(annot_ref)
 
                 key = annot.get("/T")
                 if not key:

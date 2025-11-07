@@ -76,7 +76,7 @@ class MainApp(tk.Tk):
     def select_excel(self):
         file_path = filedialog.askopenfilename(
             title="Select Excel File",
-            filetypes=[("Excel Files", "*.xlsx *.xls")]
+            filetypes=[("Excel Files", "*.xlsx *.xls *.xlsm")]
         )
         if not file_path:
             return
