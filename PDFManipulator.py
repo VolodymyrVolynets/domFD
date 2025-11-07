@@ -2,6 +2,7 @@ from PIL import Image
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import NameObject, TextStringObject
 import os
+import shutil
 
 class PDFManipulator:
     """Utility class for PDF operations: image conversion, merging, form filling, and mixed file combining."""
@@ -9,6 +10,30 @@ class PDFManipulator:
     def __init__(self, output_dir: str = "output_pdfs"):
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
+
+    # General helpers -----------------------------------------------------------------
+    def convert_to_pdf(self, input_path: str, output_name: str) -> str:
+        """Convert a single file (image or PDF) into a PDF stored in ``output_dir``."""
+        os.makedirs(self.output_dir, exist_ok=True)
+        if not output_name.lower().endswith(".pdf"):
+            output_name = f"{output_name}.pdf"
+        destination = os.path.join(self.output_dir, output_name)
+
+        if os.path.abspath(input_path) == os.path.abspath(destination):
+            print(f"[INFO] Source and destination are the same: {destination}")
+            return destination
+
+        ext = os.path.splitext(input_path)[1].lower()
+        if ext in {".jpg", ".jpeg", ".png", ".bmp", ".tiff"}:
+            image = Image.open(input_path).convert("RGB")
+            image.save(destination, "PDF")
+        elif ext == ".pdf":
+            shutil.copyfile(input_path, destination)
+        else:
+            raise ValueError(f"Unsupported file format for conversion: {input_path}")
+
+        print(f"[✔] Stored converted PDF: {destination}")
+        return destination
 
     # 1️⃣ Convert images to a single PDF
     def images_to_pdf(self, image_paths: list[str], output_name: str = "images_to_pdf.pdf") -> str:
