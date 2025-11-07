@@ -82,8 +82,14 @@ class PDFManipulator:
                     continue
 
                 key = str(key)
+                value = None
                 if key in data_dict:
                     value = data_dict[key]
+                else:
+                    if "#" in key:
+                        base_key = key.split("#", 1)[0]
+                        value = data_dict.get(base_key)
+                if value is not None:
                     annot[NameObject("/V")] = TextStringObject(value)
                     print(f"  [UPDATE] Field '{key}' → {value}")
 
