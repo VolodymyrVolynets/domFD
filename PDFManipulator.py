@@ -1,5 +1,4 @@
 from PIL import Image
-from numpy.ma.testutils import assert_not_equal
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import NameObject, TextStringObject
 import os
@@ -16,8 +15,7 @@ class PDFManipulator:
     def convert_to_pdf(self, input_path: str, output_name: str) -> str:
         """Convert a single file (image or PDF) into a PDF stored in ``output_dir``."""
         os.makedirs(self.output_dir, exist_ok=True)
-        if not output_name.lower().endswith(".pdf"):
-            output_name = f"{output_name}.pdf"
+        output_name = self._ensure_pdf_name(output_name)
         destination = os.path.join(self.output_dir, output_name)
 
         if os.path.abspath(input_path) == os.path.abspath(destination):
@@ -26,8 +24,9 @@ class PDFManipulator:
 
         ext = os.path.splitext(input_path)[1].lower()
         if ext in {".jpg", ".jpeg", ".png", ".bmp", ".tiff"}:
-            image = Image.open(input_path).convert("RGB")
-            image.save(destination, "PDF")
+            with Image.open(input_path) as img:
+                image = img.convert("RGB")
+                image.save(destination, "PDF")
         elif ext == ".pdf":
             shutil.copyfile(input_path, destination)
         else:
@@ -46,6 +45,7 @@ class PDFManipulator:
 
     # 2️⃣ Merge multiple PDF files
     def merge_pdfs(self, pdf_paths: list[str], output_name: str = "merged.pdf") -> str:
+        output_name = self._ensure_pdf_name(output_name)
         pdf_path = os.path.join(self.output_dir, output_name)
         writer = PdfWriter()
         for pdf in pdf_paths:
@@ -59,6 +59,7 @@ class PDFManipulator:
 
     # 3️⃣ Fill a fillable PDF form
     def fill_pdf_form(self, template_path: str, data_dict: dict[str, str], output_name: str = "filled_form.pdf") -> str:
+        output_name = self._ensure_pdf_name(output_name)
         pdf_path = os.path.join(self.output_dir, output_name)
         print(f"[INFO] Reading PDF template: {template_path}")
 
@@ -117,6 +118,10 @@ class PDFManipulator:
             file_paths: list of image or PDF file paths
             output_name: name of output PDF
         """
+        if not file_paths:
+            raise ValueError("No files provided for combination.")
+
+        output_name = self._ensure_pdf_name(output_name)
         pdf_path = os.path.join(self.output_dir, output_name)
         temp_pdfs = []
         writer = PdfWriter()
@@ -125,9 +130,11 @@ class PDFManipulator:
             ext = os.path.splitext(path)[1].lower()
             if ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff"]:
                 # Convert image to a temporary one-page PDF in memory
-                image = Image.open(path).convert("RGB")
-                temp_path = os.path.join(self.output_dir, f"_temp_{os.path.basename(path)}.pdf")
-                image.save(temp_path, "PDF")
+                base_name = os.path.splitext(os.path.basename(path))[0]
+                temp_path = os.path.join(self.output_dir, f"_temp_{base_name}.pdf")
+                with Image.open(path) as img:
+                    image = img.convert("RGB")
+                    image.save(temp_path, "PDF")
                 temp_pdfs.append(temp_path)
                 print(f"[INFO] Converted image to temporary PDF: {temp_path}")
                 reader = PdfReader(temp_path)
@@ -149,3 +156,7 @@ class PDFManipulator:
 
         print(f"[✔] Combined file created: {pdf_path}")
         return pdf_path
+
+    @staticmethod
+    def _ensure_pdf_name(output_name: str) -> str:
+        return output_name if output_name.lower().endswith(".pdf") else f"{output_name}.pdf"

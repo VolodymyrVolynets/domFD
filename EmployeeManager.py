@@ -183,8 +183,8 @@ class EmployeeManager:
         data: Dict[str, Any] = {}
 
         for key, aliases in self.FIELD_ALIASES.items():
-            value = self._first_present(raw, aliases)
-            if value is None:
+            found, value = self._first_present(raw, aliases)
+            if not found:
                 alias_display = ", ".join(aliases)
                 raise ValueError(
                     f"Missing required field '{alias_display}' in sheet '{self.sheet_name}'."
@@ -192,27 +192,44 @@ class EmployeeManager:
             data[key] = value
 
         for key, aliases in self.OPTIONAL_FIELD_ALIASES.items():
-            value = self._first_present(raw, aliases)
-            if value is not None:
+            found, value = self._first_present(raw, aliases)
+            if found:
                 data[key] = value
             else:
                 data.setdefault(key, None)
 
         return data
 
-    @staticmethod
-    def _first_present(raw: Dict[str, Any], aliases: Iterable[str]) -> Any:
+    def _first_present(self, raw: Dict[str, Any], aliases: Iterable[str]) -> tuple[bool, Any]:
         for alias in aliases:
             alias_key = alias.lower()
             if alias_key in raw:
-                return raw[alias_key]
-        return None
+                value = self._clean_value(raw[alias_key])
+                return True, value
+        return False, None
+
+    @staticmethod
+    def _clean_value(value: Any) -> Any:
+        if isinstance(value, str):
+            value = value.strip()
+            return value or None
+        if pd.isna(value):
+            return None
+        return value
 
     def _validate_required(self, data: Dict[str, Any]) -> None:
         for field in self.FIELD_ALIASES:
             value = data.get(field)
-            if value is None or (isinstance(value, str) and not value.strip()):
+            if self._is_missing(value):
                 raise ValueError(
                     f"Field '{field}' is empty in sheet '{self.sheet_name}'."
                 )
         print("[VALIDATION] All required fields are filled.")
+
+    @staticmethod
+    def _is_missing(value: Any) -> bool:
+        if value is None:
+            return True
+        if isinstance(value, str):
+            return not value.strip()
+        return pd.isna(value)

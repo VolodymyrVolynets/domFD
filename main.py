@@ -136,11 +136,11 @@ class MainApp(tk.Tk):
             messagebox.showwarning("No Employee", "Please load a valid employee first.")
             return
 
-        file_path = filedialog.askopenfilename(
+        file_paths = filedialog.askopenfilenames(
             title=f"Upload {doc_type} Document",
-            filetypes=[("PDF or Image", "*.pdf *.jpg *.jpeg *.png")]
+            filetypes=[("PDF or Image", "*.pdf *.jpg *.jpeg *.png *.bmp *.tiff")]
         )
-        if not file_path:
+        if not file_paths:
             return
 
         try:
@@ -150,13 +150,16 @@ class MainApp(tk.Tk):
             return
 
         try:
-            stored_path = self.pdf_manipulator.convert_to_pdf(file_path, output_name)
+            if len(file_paths) == 1:
+                stored_path = self.pdf_manipulator.convert_to_pdf(file_paths[0], output_name)
+            else:
+                stored_path = self.pdf_manipulator.combine_files(list(file_paths), output_name)
         except Exception as exc:  # noqa: BLE001
             traceback.print_exc()
             messagebox.showerror("Conversion Failed", str(exc))
             return
 
-        print(f"[UPLOAD] {doc_type}: {stored_path}")
+        print(f"[UPLOAD] {doc_type}: {stored_path} (from {len(file_paths)} file(s))")
         self.upload_status[doc_type].config(text="✔", foreground="green")
         self.uploaded_files[doc_type] = stored_path
 
